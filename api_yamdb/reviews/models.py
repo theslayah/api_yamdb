@@ -2,6 +2,9 @@ from django.db import models
 
 
 class Category(models.Model):
+    """
+    Модель категорий произведений.
+    """
     name = models.CharField(
         verbose_name='Название',
         max_length=100
@@ -22,6 +25,9 @@ class Category(models.Model):
 
 
 class Genre(models.Model):
+    """
+    Модель для жанров произведений.
+    """
     name = models.CharField(
         verbose_name='Название',
         max_length=100
@@ -42,6 +48,10 @@ class Genre(models.Model):
 
 
 class Title(models.Model):
+    """
+    Модель произведений, к которым пишут
+    отзывы.
+    """
     name = models.CharField(
         verbose_name='Название',
         max_length=100
@@ -74,6 +84,11 @@ class Title(models.Model):
 
 
 class GenreTitle(models.Model):
+    """
+    Дополнительная модель для связи
+    моделей жанра произведений и
+    категории произведений.
+    """
     title = models.ForeignKey(
         Title,
         verbose_name='Произведение',
