@@ -117,3 +117,9 @@ STATICFILES_DIRS = ((BASE_DIR / 'static/'),)
 # User model
 
 AUTH_USER_MODEL = 'users.User'
+
+# Email
+
+EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')
+EMAIl_TOKEN = 'token@yamdb.test'
