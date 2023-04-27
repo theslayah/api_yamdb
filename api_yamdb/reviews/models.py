@@ -154,7 +154,8 @@ class Comment(models.Model):
     review = models.ForeignKey(
         Review,
         verbose_name='Отзыв',
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name='comments'
     )
     text = models.TextField(
         verbose_name='Текст комментария'

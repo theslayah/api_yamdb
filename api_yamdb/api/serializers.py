@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from reviews.models import Category, Genre, Title
+from reviews.models import Category, Comment, Genre, Review, Title
 from users.models import User
 
 
@@ -91,3 +91,29 @@ class ReadOnlyTitleSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'name', 'rating', 'genre', 'category'
         )
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    """Сериализует данные запросов
+    эндпоинтов r'reviews'.
+    """
+    author = serializers.SlugRelatedField(
+        read_only=True, slug_field='username'
+    )
+
+    class Meta:
+        model = Review
+        exclude = ('title',)
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    """Сериализует данные запросов
+    эндпоинтов r'comments'.
+    """
+    author = serializers.SlugRelatedField(
+        read_only=True, slug_field='username'
+    )
+
+    class Meta:
+        model = Comment
+        exclude = ('review',)
