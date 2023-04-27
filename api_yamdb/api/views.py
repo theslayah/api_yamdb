@@ -1,20 +1,26 @@
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
-from django.conf import settings
+from django.db.models import Avg
+from django_filters.rest_framework import DjangoFilterBackend
 
-from rest_framework import status, viewsets
+from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 
 from users.models import User
+from reviews.models import Category, Genre, Title
+from .filters import TitlesFilter
+from .mixins import ListCreateDestroyViewSet
 from .permissions import (
     IsAdminOnly, IsAdminOrReadOnly, IsAuthorAdminModeratorPermission
 )
 from .serializers import (
-    UserSerializer, CreateUserSerializer, TokenSeializer
+    UserSerializer, CreateUserSerializer, TokenSeializer,
+    CategorySerializer, GenreSerializer,
+    ReadOnlyTitleSerializer, TitleCreateSerializer
 )
 
 
@@ -81,3 +87,39 @@ class UsersViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save(role=user.role, partial=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CategoryViewSet(ListCreateDestroyViewSet):
+    """Обрабатывает запросы к эндпоинтам r'categories'."""
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = (IsAdminOrReadOnly,)
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ("name",)
+    lookup_field = "slug"
+
+
+class GenreViewSet(ListCreateDestroyViewSet):
+    """Обрабатывает запросы к эндпоинтам r'genres'."""
+    queryset = Genre.objects.all()
+    serializer_class = GenreSerializer
+    permission_classes = (IsAdminOrReadOnly,)
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ("name",)
+    lookup_field = "slug"
+
+
+class TitleViewSet(viewsets.ModelViewSet):
+    """Обрабатывает запросы к эндпоинтам r'titles'."""
+    queryset = Title.objects.annotate(
+        rating=Avg("reviews__score")
+    ).order_by("name")
+    serializer_class = TitleCreateSerializer
+    permission_classes = (IsAdminOrReadOnly,)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = TitlesFilter
+
+    def get_serializer_class(self):
+        if self.action in ("retrieve", "list"):
+            return ReadOnlyTitleSerializer
+        return TitleCreateSerializer

@@ -6,11 +6,14 @@ from .views import (
     CategoryViewSet, GenreViewSet, TitleViewSet,
 )
 
-router = DefaultRouter
+router = DefaultRouter()
 router.register(r'users', UsersViewSet)
-
+router.register(r'categories', CategoryViewSet)
+router.register(r'genres', GenreViewSet)
+router.register(r'titles', TitleViewSet)
 
 urlpatterns = [
     path('v1/auth/token/', get_jwt_token.as_view(), name='token_obtain'),
     path('v1/auth/signup/', send_confirmation_code.as_view(), name='sign_up'),
+    path('v1/', include(router.urls)),
 ]
