@@ -12,12 +12,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 
 from users.models import User
-from reviews.models import Category, Comment, Genre, Review, Title
+from reviews.models import Category, Genre, Review, Title
 from .filters import TitlesFilter
 from .mixins import ListCreateDestroyViewSet
 from .permissions import (
-    IsAdminOnly, IsAdminOrReadOnly, IsAuthorAdminModeratorPermission,
-    IsAuthorOrReadOnly
+    IsAdminOnly, IsAdminOrReadOnly, IsAuthorAdminModeratorPermission
 )
 from .serializers import (
     UserSerializer, CreateUserSerializer, TokenSeializer,
