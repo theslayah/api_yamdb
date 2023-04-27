@@ -1,6 +1,5 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db.models import Avg
 
 from users.models import User
 
@@ -73,7 +72,6 @@ class Title(models.Model):
         null=True
     )
     rating = models.IntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(10)],
         verbose_name='Рейтинг',
         null=True,
         default=None
@@ -81,9 +79,6 @@ class Title(models.Model):
 
     def __str__(self):
         return self.name
-    
-    def average_rating(self):
-        return self.reviews.aggregate(Avg('rating'))['rating__avg']
 
     class Meta:
         verbose_name = 'Произведение'
@@ -129,16 +124,16 @@ class Review(models.Model):
         on_delete=models.CASCADE,
         related_name='reviewer'
     )
-    rating = models.IntegerField(
+    score = models.IntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(10)]
     )
     text = models.TextField(
         verbose_name='Текст отзыва'
     )
-    created_at = models.DateTimeField(auto_now_add=True)
+    pub_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f'{self.title.name}: {self.rating}'
+        return f'{self.title.name}: {self.score}'
 
     class Meta:
         verbose_name = 'Отзыв'
@@ -169,7 +164,7 @@ class Comment(models.Model):
         on_delete=models.CASCADE,
         related_name='comments'
     )
-    created_at = models.DateTimeField(auto_now_add=True)
+    pub_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.text
@@ -177,4 +172,4 @@ class Comment(models.Model):
     class Meta:
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
-        ordering = ['created_at']
+        ordering = ['pub_date']
