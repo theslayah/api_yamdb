@@ -11,6 +11,7 @@ router.register(r'genres', GenreViewSet)
 router.register(r'titles', TitleViewSet)
 
 urlpatterns = [
+    path('v1/auth/token/', TokenObtainPairView.as_view(), name='token_obtain')
     path('v1/', include(router.urls)),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair')
 ]
