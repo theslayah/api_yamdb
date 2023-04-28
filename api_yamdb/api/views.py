@@ -112,7 +112,7 @@ class GenreViewSet(ListCreateDestroyViewSet):
 
 class TitleViewSet(viewsets.ModelViewSet):
     """Обрабатывает запросы к эндпоинтам r'titles'."""
-    queryset = Title.objects.annotate(
+    queryset = Title.objects.all().annotate(
         rating=Avg("reviews__score")
     ).order_by("name")
     serializer_class = TitleCreateSerializer
