@@ -28,14 +28,14 @@ class CreateUserSerializer(serializers.ModelSerializer):
         return data
 
 
-class TokenSeializer(serializers.ModelSerializerd):
+class TokenSeializer(serializers.ModelSerializer):
     """Сериализатор для JWT-токена."""
     username = serializers.CharField()
     confiramtion_code = serializers.CharField()
 
     class Meta:
         model = User
-        fields = ('username', 'confirmation_codde',)
+        fields = ('username', 'confirmation_code',)
 
 
 class CategorySerializer(serializers.ModelSerializer):

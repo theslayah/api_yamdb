@@ -71,11 +71,6 @@ class Title(models.Model):
         related_name='titles',
         null=True
     )
-    rating = models.IntegerField(
-        verbose_name='Рейтинг',
-        null=True,
-        default=None
-    )
 
     def __str__(self):
         return self.name
@@ -119,6 +114,9 @@ class Review(models.Model):
         on_delete=models.CASCADE,
         related_name='reviews'
     )
+    text = models.TextField(
+        verbose_name='Текст отзыва'
+    )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -126,9 +124,6 @@ class Review(models.Model):
     )
     score = models.IntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(10)]
-    )
-    text = models.TextField(
-        verbose_name='Текст отзыва'
     )
     pub_date = models.DateTimeField(auto_now_add=True)
 
