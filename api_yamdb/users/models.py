@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractUser
 
 class User(AbstractUser):
     """Создание пользователя."""
+
     ADMIN = 'admin'
     MODERATOR = 'moderator'
     USER = 'user'
@@ -29,13 +30,14 @@ class User(AbstractUser):
     )
     confirmation_code = models.CharField(
         verbose_name='Токен',
-        max_length=15,
+        max_length=120,
         blank=True,
         null=True,
     )
 
     class Meta:
         ordering = ('username',)
+        
 
     @property
     def is_admin(self):

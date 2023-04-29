@@ -6,10 +6,10 @@ from django.conf import settings
 from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework import filters, status, viewsets
-from rest_framework.decorators import api_view, action
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from users.models import User
 from reviews.models import Category, Genre, Review, Title
@@ -27,6 +27,7 @@ from .serializers import (
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def get_jwt_token(request):
     serializer = TokenSeializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -37,8 +38,7 @@ def get_jwt_token(request):
         refresh = RefreshToken.for_user(user)
         return Response(
             {'token': str(refresh.access_token)},
-            status=status.HTTP_200_OK
-        )
+            status=status.HTTP_200_OK)
     return Response(
         {'confirmation_code': 'Код подтверждения неверен'},
         status=status.HTTP_400_BAD_REQUEST
@@ -46,29 +46,37 @@ def get_jwt_token(request):
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def send_confirmation_code(request):
     serializer = CreateUserSerializer(data=request.data)
+    # if serializer.is_valid():
+    #     user = serializer.save()
+    #     confirmation_code = default_token_generator.make_token(user)
+    #     message = f'Код подтверждения {confirmation_code}'
+    #     subject = 'Код подтверждения'
+    #     send_mail(subject, message,
+    #         from_email=None,
+    #         recipient_list=[user.email],
+    #     )
+    #     return Response(
+    #         serializer.data, status=status.HTTP_200_OK
+    #     )
+    # return Response(status=status.HTTP_400_BAD_REQUEST)
     serializer.is_valid(raise_exception=True)
-    email = serializer.validated_data.get('email')
-    username = serializer.validated_data.get('username')
-    if (
-        User.objects.filter(username=username).exists() or
-        User.objects.filter(email=email).exists()
-    ):
-        return Response(
-            {'Username или Email уже используется.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    else:
-        User.objects.create_user(username=username, email=email)
-    user = get_object_or_404(User, email=email)
-    confirmation_code = default_token_generator.make_token(user)
-    message = f'Код подтверждения {confirmation_code}'
-    subject = 'Код подтверждения'
-    send_mail(subject, message, settings.EMAIL_TOKEN, [email])
-    return Response(
-        serializer.data, status=status.HTTP_200_OK
+    serializer.save()
+    user = get_object_or_404(
+        User,
+        username=serializer.validated_data['username']
     )
+    confirmation_code = default_token_generator.make_token(user)
+    send_mail(
+        subject='Код подтверждения',
+        message=f'Код подтверждения: {confirmation_code}',
+        from_email=None,
+        recipient_list=[user.email],
+    )
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class UsersViewSet(viewsets.ModelViewSet):
@@ -76,6 +84,8 @@ class UsersViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsAdminOnly,)
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('username',)
     lookup_field = 'username'
 
     @action(detail=False, methods=['get', 'patch'],
@@ -85,10 +95,13 @@ class UsersViewSet(viewsets.ModelViewSet):
         if request.method == 'GET':
             serializer = self.get_serializer(user)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        serializer = self.get_serializer(user, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(role=user.role, partial=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if request.method == 'PATCH':
+            serializer = self.get_serializer(user, data=request.data, partial=True)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save(role=user.role, partial=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 class CategoryViewSet(ListCreateDestroyViewSet):
@@ -130,7 +143,7 @@ class TitleViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     """
     Обрабатывает запросы к эндпоинтам
-    r'titles/(?P<title_id>\d+)/reviews'.
+    отзывов.
     """
     serializer_class = ReviewSerializer
     permission_classes = (IsAuthorAdminModeratorPermission,)
@@ -147,7 +160,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class CommentViewSet(viewsets.ModelViewSet):
     """
     Обрабатывает запросы к эндпоинтам
-    r'titles/(?P<title_id>\d+)/reviews/(?P<review_id>\d+)/comments'.
+    комментариев к отзывам.
     """
     serializer_class = CommentSerializer
     permission_classes = (IsAuthorAdminModeratorPermission,)
