@@ -1,14 +1,14 @@
+from sqlite3 import IntegrityError
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db.models import Avg
-from django.conf import settings
 from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from users.models import User
@@ -29,15 +29,19 @@ from .serializers import (
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def get_jwt_token(request):
+    """Получение токена по username
+    и коду подтверждения, обработка
+    эндпоинта 'v1/auth/token/'.
+    """
     serializer = TokenSeializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     username = serializer.validated_data.get('username')
     confirmation_code = serializer.validated_data.get('confirmation_code')
     user = get_object_or_404(User, username=username)
     if default_token_generator.check_token(user, confirmation_code):
-        refresh = RefreshToken.for_user(user)
+        token = AccessToken.for_user(user)
         return Response(
-            {'token': str(refresh.access_token)},
+            {'token': str(token)},
             status=status.HTTP_200_OK)
     return Response(
         {'confirmation_code': 'Код подтверждения неверен'},
@@ -48,26 +52,22 @@ def get_jwt_token(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def send_confirmation_code(request):
+    """View-функция для входа и
+    регистрации, обработка эндпоинта
+    'v1/auth/signup/'.
+    """
     serializer = CreateUserSerializer(data=request.data)
-    # if serializer.is_valid():
-    #     user = serializer.save()
-    #     confirmation_code = default_token_generator.make_token(user)
-    #     message = f'Код подтверждения {confirmation_code}'
-    #     subject = 'Код подтверждения'
-    #     send_mail(subject, message,
-    #         from_email=None,
-    #         recipient_list=[user.email],
-    #     )
-    #     return Response(
-    #         serializer.data, status=status.HTTP_200_OK
-    #     )
-    # return Response(status=status.HTTP_400_BAD_REQUEST)
     serializer.is_valid(raise_exception=True)
-    serializer.save()
-    user = get_object_or_404(
-        User,
-        username=serializer.validated_data['username']
-    )
+    try:
+        email = serializer.validated_data.get('email')
+        username = serializer.validated_data.get('username')
+        user, _ = User.objects.get_or_create(
+            username=username,
+            email=email,
+        )
+    except IntegrityError:
+        return Response('Попробуйте ввести другие данные',
+                        status=status.HTTP_400_BAD_REQUEST)
     confirmation_code = default_token_generator.make_token(user)
     send_mail(
         subject='Код подтверждения',
@@ -75,12 +75,12 @@ def send_confirmation_code(request):
         from_email=None,
         recipient_list=[user.email],
     )
-
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class UsersViewSet(viewsets.ModelViewSet):
     """Вьюсет для User."""
+    http_method_names = ['get', 'post', 'patch', 'delete']
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsAdminOnly,)
@@ -96,8 +96,10 @@ class UsersViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(user)
             return Response(serializer.data, status=status.HTTP_200_OK)
         if request.method == 'PATCH':
-            serializer = self.get_serializer(user, data=request.data, partial=True)
-            if serializer.is_valid(raise_exception=True):
+            serializer = self.get_serializer(user, data=request.data,
+                                             partial=True)
+            if serializer.is_valid(
+                    raise_exception=True):
                 serializer.save(role=user.role, partial=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -110,8 +112,8 @@ class CategoryViewSet(ListCreateDestroyViewSet):
     serializer_class = CategorySerializer
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
-    search_fields = ("name",)
-    lookup_field = "slug"
+    search_fields = ('name',)
+    lookup_field = 'slug'
 
 
 class GenreViewSet(ListCreateDestroyViewSet):
@@ -120,22 +122,22 @@ class GenreViewSet(ListCreateDestroyViewSet):
     serializer_class = GenreSerializer
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
-    search_fields = ("name",)
-    lookup_field = "slug"
+    search_fields = ('name',)
+    lookup_field = 'slug'
 
 
 class TitleViewSet(viewsets.ModelViewSet):
     """Обрабатывает запросы к эндпоинтам r'titles'."""
     queryset = Title.objects.all().annotate(
-        rating=Avg("reviews__score")
-    ).order_by("name")
+        rating=Avg('reviews__score')
+    ).order_by('name')
     serializer_class = TitleCreateSerializer
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitlesFilter
 
     def get_serializer_class(self):
-        if self.action in ("retrieve", "list"):
+        if self.action in ('retrieve', 'list'):
             return ReadOnlyTitleSerializer
         return TitleCreateSerializer
 
